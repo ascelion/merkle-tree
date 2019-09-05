@@ -30,16 +30,13 @@ import java.util.stream.Stream;
 import static java.lang.Integer.bitCount;
 import static java.lang.Integer.numberOfLeadingZeros;
 import static java.util.Arrays.asList;
-
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Builder class for a Merkle tree.
  *
  * @author https://github.com/pa314159
  */
-@RequiredArgsConstructor
 public final class TreeBuilder<T> {
 
 	static private int next_pow2(int value) {
@@ -107,18 +104,27 @@ public final class TreeBuilder<T> {
 	}
 
 	// the hash function
-	@NonNull
 	public final UnaryOperator<T> hashFn;
 	// the concatenation function
-	@NonNull
 	private final BinaryOperator<T> concatFn;
 	// supplier for the value of filler
-	@NonNull
 	private final Supplier<T> zero;
 
 	private final List<TreeLeaf<T, ?>> collect = new ArrayList<>();
 
-	public TreeBuilder(@NonNull UnaryOperator<T> hashFn, @NonNull BinaryOperator<T> concatFn, @NonNull T zero) {
+	/**
+	 * Constructs a tree builder, with a hash operator, a concatenation and a supplier for filler values.
+	 */
+	public TreeBuilder(UnaryOperator<T> hashFn, BinaryOperator<T> concatFn, Supplier<T> zero) {
+		this.hashFn = requireNonNull(hashFn, "The hash operator cannot be null");
+		this.concatFn = requireNonNull(concatFn, "The concatenation operator cannot be null");
+		this.zero = requireNonNull(zero, "The supplier of the filler value cannot be null");
+	}
+
+	/**
+	 * Constructs a tree builder, with a hash operator, a concatenation and a filler value.
+	 */
+	public TreeBuilder(UnaryOperator<T> hashFn, BinaryOperator<T> concatFn, T zero) {
 		this(hashFn, concatFn, () -> zero);
 	}
 
@@ -126,6 +132,8 @@ public final class TreeBuilder<T> {
 	 * Convenient method to collect leaves; user must then call {@link #build()} to build the tree.
 	 */
 	public TreeBuilder<T> collect(TreeLeaf<T, ?> leaf) {
+		requireNonNull(leaf, "The leaf cannot be null");
+
 		this.collect.add(leaf);
 
 		return this;
@@ -135,6 +143,8 @@ public final class TreeBuilder<T> {
 	 * Convenient method to collect leaves; user must then call {@link #build()} to build the tree.
 	 */
 	public TreeBuilder<T> collect(Stream<TreeLeaf<T, ?>> stream) {
+		requireNonNull(stream, "The leaves stream cannot be null");
+
 		stream.forEachOrdered(this.collect::add);
 
 		return this;
@@ -143,8 +153,10 @@ public final class TreeBuilder<T> {
 	/**
 	 * Convenient method to collect leaves; user must then call {@link #build()} to build the tree.
 	 */
-	public TreeBuilder<T> collect(Iterable<TreeLeaf<T, ?>> stream) {
-		stream.forEach(this.collect::add);
+	public TreeBuilder<T> collect(Iterable<TreeLeaf<T, ?>> it) {
+		requireNonNull(it, "The collection of leaves cannot be null");
+
+		it.forEach(this.collect::add);
 
 		return this;
 	}
@@ -152,8 +164,10 @@ public final class TreeBuilder<T> {
 	/**
 	 * Convenient method to collect leaves; user must then call {@link #build()} to build the tree.
 	 */
-	public TreeBuilder<T> collect(Iterator<TreeLeaf<T, ?>> stream) {
-		stream.forEachRemaining(this.collect::add);
+	public TreeBuilder<T> collect(Iterator<TreeLeaf<T, ?>> it) {
+		requireNonNull(it, "The iterator over leaves cannot be null");
+
+		it.forEachRemaining(this.collect::add);
 
 		return this;
 	}
@@ -175,7 +189,9 @@ public final class TreeBuilder<T> {
 	 *
 	 * @param leaves the array of leaves.
 	 */
-	public TreeRoot<T> build(@NonNull TreeLeaf<T, ?>[] leaves) {
+	public TreeRoot<T> build(TreeLeaf<T, ?>[] leaves) {
+		requireNonNull(leaves, "The array of leaves cannot be null");
+
 		return build(asList(leaves));
 	}
 
@@ -184,7 +200,9 @@ public final class TreeBuilder<T> {
 	 *
 	 * @param leaves the array of leaves.
 	 */
-	public TreeRoot<T> build(@NonNull Collection<TreeLeaf<T, ?>> leaves) {
+	public TreeRoot<T> build(Collection<TreeLeaf<T, ?>> leaves) {
+		requireNonNull(leaves, "The collection of leaves cannot be null");
+
 		if (leaves.size() == 0) {
 			throw new IllegalArgumentException("Cannot build a tree from no node");
 		}
@@ -213,7 +231,10 @@ public final class TreeBuilder<T> {
 	/**
 	 * Checks whether a hash chain is valid using the operators of this builder instance.
 	 */
-	public boolean isValid(@NonNull List<T> chain, int index, @NonNull BiPredicate<T, T> eq) {
+	public boolean isValid(List<T> chain, int index, BiPredicate<T, T> eq) {
+		requireNonNull(chain, "The validation chain cannot be null");
+		requireNonNull(chain, "The equality operator cannot be null");
+
 		if (chain.size() < 2) {
 			throw new IllegalArgumentException("Chain too short");
 		}

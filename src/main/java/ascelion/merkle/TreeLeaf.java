@@ -22,8 +22,6 @@ import java.util.List;
 
 import static java.util.Collections.unmodifiableList;
 
-import lombok.Getter;
-
 /**
  * A leaf of the Merkle tree.
  *
@@ -45,13 +43,19 @@ public class TreeLeaf<T, S> extends TreeNode<T> {
 
 	private final List<T> chain = new ArrayList<>();
 
-	@Getter
 	private final S content;
 
 	public TreeLeaf(T hash, S content) {
 		super(hash);
 
 		this.content = content;
+	}
+
+	/**
+	 * Gets the content associated to this leaf.
+	 */
+	public S getContent() {
+		return this.content;
 	}
 
 	/**

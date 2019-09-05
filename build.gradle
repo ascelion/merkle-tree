@@ -20,5 +20,4 @@ dependencies {
 
 defaultTasks 'clean', 'build'
 
-apply from: 'lombok.gradle'
 apply from: 'tests.gradle'
