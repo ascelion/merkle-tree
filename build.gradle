@@ -1,0 +1,24 @@
+
+plugins {
+	id 'pl.allegro.tech.build.axion-release' version '1.10.2'
+	id 'java-library'
+}
+
+repositories {
+	jcenter()
+}
+
+group = 'ascelion.public'
+version = scmVersion.version
+
+sourceCompatibility = '1.8'
+targetCompatibility = '1.8'
+
+dependencies {
+	testImplementation 'commons-codec:commons-codec:1.13'
+}
+
+defaultTasks 'clean', 'build'
+
+apply from: 'lombok.gradle'
+apply from: 'tests.gradle'

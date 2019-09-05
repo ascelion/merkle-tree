@@ -1,0 +1,31 @@
+
+apply plugin: 'jacoco'
+
+dependencies {
+	testImplementation 'junit:junit:4.12'
+	testImplementation 'org.hamcrest:hamcrest-core:1.3'
+	testImplementation 'org.hamcrest:hamcrest-library:1.3'
+}
+
+task testReport(type: TestReport) {
+	destinationDir = file("$buildDir/reports/tests")
+
+	tasks.withType(Test) {
+		reportOn it
+	}
+}
+
+tasks.withType(Test) {
+	ignoreFailures = gradle.startParameter.continueOnFailure
+
+	testLogging.showStandardStreams = true
+ 	testLogging.exceptionFormat = 'full'
+
+	reports.html.enabled = false
+
+	check.dependsOn it
+	testReport.dependsOn it
+	jacocoTestReport.executionData it
+}
+
+check.dependsOn testReport, jacocoTestReport
