@@ -1,3 +1,4 @@
 rootProject.name = 'merkle-tree'
 
+include ':demo'
 include ':impl'

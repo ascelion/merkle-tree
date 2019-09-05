@@ -2,6 +2,8 @@ package ascelion.merkle.help;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.ByteChannel;
 import java.util.Arrays;
 
 import ascelion.merkle.TreeBuilder;
@@ -27,11 +29,11 @@ public final class DataSlice extends TreeLeaf<byte[], byte[]> {
 	/**
 	 * Ensures all bytes are read.
 	 */
-	private static byte[] readNBytes(InputStream is, int size) throws IOException {
+	private static byte[] readNBytes(InputStream ist, int size) throws IOException {
 		final byte[] data = new byte[size];
 		int read = 0;
 
-		while (size > 0 && (read = is.read(data, data.length - size, size)) > 0) {
+		while (size > 0 && (read = ist.read(data, data.length - size, size)) > 0) {
 			size -= read;
 		}
 		if (size > 0) {
@@ -49,6 +51,27 @@ public final class DataSlice extends TreeLeaf<byte[], byte[]> {
 
 		while ((data = readNBytes(ist, size)).length > 0) {
 			bld.collect(new DataSlice(bld.hashFn.apply(data), data));
+		}
+
+		return bld.build();
+	}
+
+	/**
+	 * @param size the size of a slice.
+	 */
+	static public TreeRoot<byte[]> buildTree(TreeBuilder<byte[]> bld, int size, ByteChannel chn) throws IOException {
+		final ByteBuffer buf = ByteBuffer.allocateDirect(size);
+
+		while (chn.read(buf) > 0) {
+			buf.flip();
+
+			final byte[] data = new byte[buf.limit()];
+
+			buf.get(data, 0, data.length);
+
+			bld.collect(new DataSlice(bld.hashFn.apply(data), data));
+
+			buf.clear();
 		}
 
 		return bld.build();

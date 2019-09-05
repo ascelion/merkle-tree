@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+	<property name="LOG_PATH" value="${LOG_PATH:-${user.dir}}" />
+	<property name="LOG_NAME" value="${LOG_NAME:-merkle-tree-demo}" />
+	<property name="LOG_FILE" value="${LOG_NAME}.log" />
+
+	<appender name="FILE" class="ch.qos.logback.core.FileAppender">
+		<file>${LOG_PATH}/${LOG_FILE}</file>
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} %-5level [%-40logger{40}] %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>ALL</level>
+		</filter>
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} %-5level [%logger{20}] %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<logger name="org.glassfish.jersey" level="INFO" />
+	<logger name="org.jboss.weld" level="INFO" />
+
+	<root level="INFO">
+		<appender-ref ref="FILE" />
+		<appender-ref ref="CONSOLE" />
+	</root>
+
+</configuration>
