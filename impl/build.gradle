@@ -1,0 +1,12 @@
+
+apply plugin: 'java-library'
+
+dependencies {
+	testImplementation 'commons-codec:commons-codec:1.13'
+}
+
+ext {
+	setArtifactId = rootProject.name
+}
+
+apply from: rootProject.file( 'publish.gradle' )

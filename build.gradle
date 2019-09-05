@@ -1,23 +1,34 @@
 
 plugins {
 	id 'pl.allegro.tech.build.axion-release' version '1.10.2'
-	id 'java-library'
-}
-
-repositories {
-	jcenter()
 }
 
 group = 'ascelion.public'
 version = scmVersion.version
 
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
+allprojects {
+	apply plugin: 'eclipse'
 
-dependencies {
-	testImplementation 'commons-codec:commons-codec:1.13'
+	repositories {
+		jcenter()
+	}
+
+	defaultTasks 'clean', 'build'
 }
 
-defaultTasks 'clean', 'build'
+subprojects { sub ->
+	group = rootProject.group
+	version = rootProject.version
 
-apply from: 'tests.gradle'
+	apply plugin: 'java'
+
+	sourceCompatibility = '1.8'
+	targetCompatibility = '1.8'
+
+	apply from: rootProject.file('tests.gradle')
+
+	plugins.withType( MavenPublishPlugin ) {
+	}
+
+	eclipse.project.name = "${rootProject.name}-${project.name}"
+}

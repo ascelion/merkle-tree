@@ -1,0 +1,105 @@
+
+apply plugin: 'maven-publish'
+
+def doPublish  = project.hasProperty( 'doPublish' )
+def isSnapshot = version.endsWith( '-SNAPSHOT' )
+def isRelease  = !isSnapshot
+
+def signKey    = "${rootProject.name}.sign.keyId"
+def signSecret = "${rootProject.name}.sign.keySecret"
+def bintrayUSR = "${rootProject.name}.bintray.username"
+def bintrayPWD = "${rootProject.name}.bintray.password"
+
+def gext       = gradle.ext
+
+task sourcesJar(type: Jar) {
+	from sourceSets.main.allJava
+	classifier = 'sources'
+}
+
+task javadocJar(type: Jar) {
+	from javadoc
+	classifier = 'javadoc'
+}
+
+publishing {
+	publications {
+		maven( MavenPublication ) {
+			from components.java
+
+			artifact sourcesJar
+			artifact javadocJar
+
+			artifactId = setArtifactId
+
+			pom {
+				name = artifactId
+				url = 'https://github.com/ascelion/merkle-tree'
+				description = 'Merkle Tree - A generic implementation of Merkle trees'
+				scm {
+					url = 'https://github.com/ascelion/merkle-tree'
+					connection = 'https://github.com/ascelion/merkle-tree.git'
+					developerConnection = 'git@github.com:ascelion/merkle-tree.git'
+				}
+				licenses {
+					license {
+						name = 'GNU Affero General Public License version 3'
+						url = 'https://opensource.org/licenses/AGPL-3.0'
+						distribution = 'repo'
+					}
+				}
+			}
+		}
+	}
+
+	if( doPublish && gradle.hasProperty( bintrayUSR ) ) {
+		repositories {
+			maven {
+				name = 'jfrog'
+				url = "https://oss.jfrog.org/artifactory/oss-${isSnapshot ? 'snapshot' : 'release'}-local"
+
+				credentials {
+					username = gext[bintrayUSR]
+					password = gradle.decryptPassword( gext[bintrayPWD] )
+				}
+			}
+		}
+	}
+}
+
+if( gradle.hasProperty( signKey ) ) {
+	apply plugin: 'signing'
+
+	ext['signing.gnupg.keyName'] = gext[signKey]
+
+	signing {
+		useGpgCmd()
+		sign publishing.publications.maven
+	}
+}
+
+if( isRelease && doPublish && gradle.hasProperty( bintrayUSR ) ) {
+	apply plugin: 'com.jfrog.bintray'
+
+	bintray {
+		user = gext[bintrayUSR]
+		key = gradle.decryptPassword( gext[bintrayPWD] )
+
+		publications = [ 'maven' ]
+
+		pkg {
+			repo = 'repo'
+			userOrg = 'ascelion'
+			name = rootProject.name
+			licenses = [ 'AGPL-3.0' ]
+			vcsUrl = 'https://github.com/ascelion/merkle-tree'
+			version {
+				name = project.version
+
+				gpg {
+					sign = true
+				}
+			}
+		}
+	}
+}
