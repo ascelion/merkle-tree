@@ -54,7 +54,7 @@ public class TreeLeaf<T, S> extends TreeNode<T> {
 	/**
 	 * Gets the content associated to this leaf.
 	 */
-	public S getContent() {
+	public final S getContent() {
 		return this.content;
 	}
 
@@ -62,7 +62,7 @@ public class TreeLeaf<T, S> extends TreeNode<T> {
 	 * Gets the whole hash chain of this leaf, starting with the hash of this leaf, continuing with the list of the
 	 * siblings/uncles and ending with the hash of the root.
 	 */
-	public List<T> getChain() {
+	public final List<T> getChain() {
 		return unmodifiableList(this.chain);
 	}
 

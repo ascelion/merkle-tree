@@ -60,6 +60,10 @@ class TreeNode<T> {
 		this.count = left.count() + right.count();
 	}
 
+	public final T hash() {
+		return this.hash;
+	}
+
 	int count() {
 		return this.count;
 	}

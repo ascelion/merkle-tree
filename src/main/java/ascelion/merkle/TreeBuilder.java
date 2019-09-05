@@ -37,6 +37,7 @@ import static java.util.Objects.requireNonNull;
  *
  * @author https://github.com/pa314159
  */
+@SuppressWarnings("unchecked")
 public final class TreeBuilder<T> {
 
 	static private int next_pow2(int value) {
@@ -60,12 +61,17 @@ public final class TreeBuilder<T> {
 		}
 
 		@Override
-		public int count() {
+		public final int count() {
 			return super.count();
 		}
 
 		@Override
-		public <L extends TreeLeaf<T, ?>> L getLeaf(int index) {
+		public final int height() {
+			return this.height;
+		}
+
+		@Override
+		public final <L extends TreeLeaf<T, ?>> L getLeaf(int index) {
 			if (index < 0) {
 				throw new IllegalArgumentException("Negative index");
 			}
@@ -97,7 +103,7 @@ public final class TreeBuilder<T> {
 		}
 
 		@Override
-		int count() {
+		public int count() {
 			// empty nodes don't count
 			return 0;
 		}
@@ -203,17 +209,17 @@ public final class TreeBuilder<T> {
 	public TreeRoot<T> build(Collection<TreeLeaf<T, ?>> leaves) {
 		requireNonNull(leaves, "The collection of leaves cannot be null");
 
-		if (leaves.size() == 0) {
+		final int size = leaves.size();
+
+		if (size == 0) {
 			throw new IllegalArgumentException("Cannot build a tree from no node");
 		}
 
 		// round to the next power of two to have sufficient height
-		final int rounded = next_pow2(leaves.size());
+		final int rounded = next_pow2(size);
 		final TreeNode<T>[] floor = leaves.toArray(new TreeNode[rounded]);
 
-		System.arraycopy(leaves, 0, floor, 0, leaves.size());
-
-		if (rounded > leaves.size()) {
+		if (rounded > size) {
 			for (int i = floor.length; floor[--i] == null;) {
 				floor[i] = new Null<>(this.zero.get());
 			}
@@ -221,9 +227,7 @@ public final class TreeBuilder<T> {
 
 		final TreeNode<T> root = doBuild(floor);
 
-		for (final TreeLeaf<T, ?> leaf : leaves) {
-			leaf.buildChain();
-		}
+		leaves.forEach(TreeLeaf::buildChain);
 
 		return new Root<>(root.hash, root.left, root.right);
 	}

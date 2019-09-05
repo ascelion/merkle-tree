@@ -25,6 +25,16 @@ package ascelion.merkle;
 public interface TreeRoot<T> {
 
 	/**
+	 * Gets the hash value of the root node.
+	 */
+	T hash();
+
+	/**
+	 * Gets the height of the tree.
+	 */
+	int height();
+
+	/**
 	 * Gets number of leaves in this tree.
 	 */
 	int count();
