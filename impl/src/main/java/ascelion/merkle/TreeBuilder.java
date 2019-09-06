@@ -259,11 +259,11 @@ public final class TreeBuilder<T> {
 			}
 		}
 
-		final TreeNode<T> root = doBuild(floor);
+		final TreeRoot<T> root = doBuild(floor);
 
 		leaves.forEach(TreeLeaf::buildChain);
 
-		return new Root<>(root.hash, root.left, root.right);
+		return root;
 	}
 
 	/**
@@ -302,24 +302,26 @@ public final class TreeBuilder<T> {
 		return eq.test(hash, chain.get(chain.size() - 1));
 	}
 
-	private TreeNode<T> doBuild(TreeNode<T>[] leaves) {
+	private Root<T> doBuild(TreeNode<T>[] leaves) {
 		// expecting a power of two
 		assert bitCount(leaves.length) == 1;
+
+		if (leaves.length == 2) {
+			return newNode(leaves[0], leaves[1], true);
+		}
 
 		final TreeNode<T>[] parents = new TreeNode[leaves.length / 2];
 
 		for (int i = 0; i < leaves.length; i += 2) {
-			final TreeNode<T> l = leaves[i];
-			final TreeNode<T> r = leaves[i + 1];
-			final T h = this.hashFn.apply(this.concatFn.apply(l.hash, r.hash));
-
-			parents[i / 2] = new TreeNode<>(h, l, r);
+			parents[i / 2] = newNode(leaves[i], leaves[i + 1], false);
 		}
 
-		if (parents.length > 1) {
-			return doBuild(parents);
-		} else {
-			return parents[0];
-		}
+		return doBuild(parents);
+	}
+
+	private <N extends TreeNode<T>> N newNode(TreeNode<T> left, TreeNode<T> right, boolean root) {
+		final T h = this.hashFn.apply(this.concatFn.apply(left.hash, right.hash));
+
+		return root ? (N) new Root<>(h, left, right) : (N) new TreeNode<>(h, left, right);
 	}
 }
