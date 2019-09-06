@@ -1,0 +1,58 @@
+<html>
+<body>
+<h1 id="merkletree">Merkle Tree</h1>
+
+<p>A generic implementation of Merkle trees</p>
+
+<h2 id="usage">Usage</h2>
+
+<p>Add <em>merkle-tree</em> as a dependency to your project.</p>
+
+<ul>
+<li>Gradle</li>
+</ul>
+
+<pre><code>  implementation 'ascelion.public:merkle-tree:1.0.0'
+</code></pre>
+
+<ul>
+<li>Maven</li>
+</ul>
+
+<pre><code class="` language-`">  &lt;dependency&gt;
+    &lt;groupId&gt;ascelion.public&lt;/groupId&gt;
+    &lt;artifactId&gt;merkle-tree&lt;/artifactId&gt;
+    &lt;version&gt;1.0.0&lt;/version&gt;
+  &lt;/dependency&gt;
+</code></pre>
+
+<p>`</p>
+
+<p>Use the TreeBuilder to create a Merkle tree</p>
+
+<pre><code>  // create a hash function
+  UnaryOperator&lt;String&gt; hashFn = ...
+
+  // create a concatenation function
+  BinaryOperator&lt;String, String&gt; concatFn = (s1, s2) -&gt; s1 + s2;
+
+  // create a tree builder
+  TreeBuilder&lt;String&gt; tbd = new TreeBuilder&lt;&gt;(hashFn, concatFn, "");
+
+  // add some nodes and build the tree
+  TreeRoot&lt;String&gt; root = tbd
+                .collect( new TreeLeaf&lt;&gt;(hashFn, "s1" )
+                // ....
+                .collect( new TreeLeaf&lt;&gt;(hashFn, "s2") )
+                .build();
+
+  // get a leaf
+  TreeLeaf&lt;String&gt; leaf1 = root.getLeaf( 0 );
+
+  // validate the hash chain
+  assertTrue( tbd.validate( leaf1.getChain() ) );
+</code></pre>
+
+<p>You may also want to check the <a href="https://github.com/ascelion/merkle-tree/tree/master/demo">demo project</a> for a real example.</p>
+</body>
+</html>

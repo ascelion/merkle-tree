@@ -9,7 +9,7 @@ Add *merkle-tree* as a dependency to your project.
 * Gradle
 
 ```
-  implementation 'ascelion.public:merkle-tree:1.0.0'
+  implementation 'ascelion.public:merkle-tree:1.0.1'
 ```
 
 * Maven
@@ -17,7 +17,7 @@ Add *merkle-tree* as a dependency to your project.
   <dependency>
     <groupId>ascelion.public</groupId>
     <artifactId>merkle-tree</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
   </dependency>
 ````
 
@@ -48,4 +48,7 @@ Use the TreeBuilder to create a Merkle tree
 ```
 
 You may also want to check the demo project for a real example.
+
+Also [see the javadoc](https://ascelion.github.io/merkle-tree/index.html).
+
 
