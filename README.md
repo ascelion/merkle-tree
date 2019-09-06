@@ -1,7 +1,27 @@
-# merkle-tree
-Merkle Tree - A generic implementation of Merkle trees
+# Merkle Tree
+
+A generic implementation of Merkle trees
 
 ## Usage ##
+
+Add *merkle-tree* as a dependency to your project.
+
+* Gradle
+
+```
+  implementation 'ascelion.public:merkle-tree:1.0.0'
+```
+
+* Maven
+````
+  <dependency>
+    <groupId>ascelion.public</groupId>
+    <artifactId>merkle-tree</artifactId>
+    <version>1.0.0</version>
+  </dependency>
+````
+
+Use the TreeBuilder to create a Merkle tree
 
 ```
   // create a hash function
@@ -26,4 +46,6 @@ Merkle Tree - A generic implementation of Merkle trees
   // validate the hash chain
   assertTrue( tbd.validate( leaf1.getChain() ) );
 ```
+
+You may also want to check the demo project for a real example.
 
