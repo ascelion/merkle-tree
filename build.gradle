@@ -1,7 +1,15 @@
-
-plugins {
-	id 'pl.allegro.tech.build.axion-release' version '1.10.2'
+buildscript {
+	repositories {
+		mavenCentral()
+		jcenter()
+	}
+	dependencies {
+		classpath 'pl.allegro.tech.build:axion-release-plugin:1.10.+'
+		classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.+'
+	}
 }
+
+apply plugin: 'pl.allegro.tech.build.axion-release'
 
 group = 'ascelion.public'
 version = scmVersion.version
