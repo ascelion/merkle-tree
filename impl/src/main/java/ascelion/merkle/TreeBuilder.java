@@ -119,7 +119,15 @@ public final class TreeBuilder<T> {
 	private final List<TreeLeaf<T, ?>> collect = new ArrayList<>();
 
 	/**
-	 * Constructs a tree builder, with a hash operator, a concatenation and a supplier for filler values.
+	 * Constructs a tree builder using the given operators and a supplier of the filler value.
+	 * <p>
+	 * Constructs a tree builder that uses arbitrary hash and concatenate functions. Both operators must handle null
+	 * values if the supplier <code>zero</code> is expected to return null.
+	 * </p>
+	 *
+	 * @param hashFn   the hash function
+	 * @param concatFn the concatenation function
+	 * @param zero     supplier of the filler value
 	 */
 	public TreeBuilder(UnaryOperator<T> hashFn, BinaryOperator<T> concatFn, Supplier<T> zero) {
 		this.hashFn = requireNonNull(hashFn, "The hash operator cannot be null");
@@ -128,7 +136,15 @@ public final class TreeBuilder<T> {
 	}
 
 	/**
-	 * Constructs a tree builder, with a hash operator, a concatenation and a filler value.
+	 * Constructs a tree builder using the given operators and a constant filler value.
+	 * <p>
+	 * Constructs a tree builder that uses arbitrary hash and concatenate functions. Both operators must handle null if
+	 * the <code>zero</code> is null.
+	 * </p>
+	 *
+	 * @param hashFn   the hash function
+	 * @param concatFn the concatenation function
+	 * @param zero     the filler value
 	 */
 	public TreeBuilder(UnaryOperator<T> hashFn, BinaryOperator<T> concatFn, T zero) {
 		this(hashFn, concatFn, () -> zero);
@@ -136,6 +152,9 @@ public final class TreeBuilder<T> {
 
 	/**
 	 * Convenient method to collect leaves; user must then call {@link #build()} to build the tree.
+	 *
+	 * @param leaf the leaf to be added to the tree.
+	 * @return the instance of this builder
 	 */
 	public TreeBuilder<T> collect(TreeLeaf<T, ?> leaf) {
 		requireNonNull(leaf, "The leaf cannot be null");
@@ -147,40 +166,53 @@ public final class TreeBuilder<T> {
 
 	/**
 	 * Convenient method to collect leaves; user must then call {@link #build()} to build the tree.
+	 *
+	 * @param leaves leaves to be added to the tree.
+	 * @return the instance of this builder
 	 */
-	public TreeBuilder<T> collect(Stream<TreeLeaf<T, ?>> stream) {
-		requireNonNull(stream, "The leaves stream cannot be null");
+	public TreeBuilder<T> collect(Stream<TreeLeaf<T, ?>> leaves) {
+		requireNonNull(leaves, "The leaves stream cannot be null");
 
-		stream.forEachOrdered(this.collect::add);
+		leaves.forEachOrdered(this.collect::add);
 
 		return this;
 	}
 
 	/**
 	 * Convenient method to collect leaves; user must then call {@link #build()} to build the tree.
+	 *
+	 * @param leaves leaves to be added to the tree.
+	 * @return the instance of this builder
 	 */
-	public TreeBuilder<T> collect(Iterable<TreeLeaf<T, ?>> it) {
-		requireNonNull(it, "The collection of leaves cannot be null");
+	public TreeBuilder<T> collect(Iterable<TreeLeaf<T, ?>> leaves) {
+		requireNonNull(leaves, "The collection of leaves cannot be null");
 
-		it.forEach(this.collect::add);
+		leaves.forEach(this.collect::add);
 
 		return this;
 	}
 
 	/**
 	 * Convenient method to collect leaves; user must then call {@link #build()} to build the tree.
+	 *
+	 * @param leaves leaves to be added to the tree.
+	 * @return the instance of this builder
 	 */
-	public TreeBuilder<T> collect(Iterator<TreeLeaf<T, ?>> it) {
-		requireNonNull(it, "The iterator over leaves cannot be null");
+	public TreeBuilder<T> collect(Iterator<TreeLeaf<T, ?>> leaves) {
+		requireNonNull(leaves, "The iterator over leaves cannot be null");
 
-		it.forEachRemaining(this.collect::add);
+		leaves.forEachRemaining(this.collect::add);
 
 		return this;
 	}
 
 	/**
-	 * Builds a tree from all leaves previously passed to any <code>collect</code> method. The internal state of the
-	 * builder is cleared afterwards.
+	 * Builds a tree from all leaves previously passed to any <code>collect</code> method.
+	 * <p>
+	 * The internal state of the builder is cleared afterwards and the builder can be reused to create a different tree.
+	 * </p>
+	 *
+	 * @return the tree
 	 */
 	public TreeRoot<T> build() {
 		try {
@@ -194,6 +226,7 @@ public final class TreeBuilder<T> {
 	 * Create a Merkle tree from an array of leaves.
 	 *
 	 * @param leaves the array of leaves.
+	 * @return the tree
 	 */
 	public TreeRoot<T> build(TreeLeaf<T, ?>[] leaves) {
 		requireNonNull(leaves, "The array of leaves cannot be null");
@@ -205,6 +238,7 @@ public final class TreeBuilder<T> {
 	 * Creates a Merkle tree from a collection of leaves.
 	 *
 	 * @param leaves the array of leaves.
+	 * @return the tree
 	 */
 	public TreeRoot<T> build(Collection<TreeLeaf<T, ?>> leaves) {
 		requireNonNull(leaves, "The collection of leaves cannot be null");
@@ -234,6 +268,14 @@ public final class TreeBuilder<T> {
 
 	/**
 	 * Checks whether a hash chain is valid using the operators of this builder instance.
+	 *
+	 * The chain must contain both the hash of the node and the hash of the root as described at
+	 * {@link TreeLeaf#getChain()}.
+	 *
+	 * @param chain the validation chain
+	 * @param index index of the current leaf
+	 * @param eq    equality operator for &lt;T&gt;
+	 * @return true if the chain is valid
 	 */
 	public boolean isValid(List<T> chain, int index, BiPredicate<T, T> eq) {
 		requireNonNull(chain, "The validation chain cannot be null");

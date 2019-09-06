@@ -35,7 +35,7 @@ public class Main {
 		SLF4JBridgeHandler.removeHandlersForRootLogger();
 		SLF4JBridgeHandler.install();
 
-		final String rootLevel = System.getProperty("jul.root", "INFO");
+		final String rootLevel = System.getProperty("jul.root.level", "INFO");
 
 		LogManager.getLogManager().getLogger("").setLevel(Level.parse(rootLevel));
 	}

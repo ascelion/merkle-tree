@@ -42,9 +42,19 @@ public class TreeLeaf<T, S> extends TreeNode<T> {
 	}
 
 	private final List<T> chain = new ArrayList<>();
-
 	private final S content;
 
+	/**
+	 * Constructs a leaf witht a hash and some additional information.
+	 *
+	 * <p>
+	 * The <code>content</code> doesn't have any particular meaning and is not checked in any way, but usually it
+	 * represents the data whose hash value is passed to the <code>hash</code> parameter.
+	 * </p>
+	 *
+	 * @param hash    the hash of this leaf
+	 * @param content data associated to this leaf
+	 */
 	public TreeLeaf(T hash, S content) {
 		super(hash);
 
@@ -52,7 +62,9 @@ public class TreeLeaf<T, S> extends TreeNode<T> {
 	}
 
 	/**
-	 * Gets the content associated to this leaf.
+	 * Gets the data associated to this leaf.
+	 *
+	 * @return the data associated to this leaf.
 	 */
 	public final S getContent() {
 		return this.content;
@@ -61,6 +73,8 @@ public class TreeLeaf<T, S> extends TreeNode<T> {
 	/**
 	 * Gets the whole hash chain of this leaf, starting with the hash of this leaf, continuing with the list of the
 	 * siblings/uncles and ending with the hash of the root.
+	 *
+	 * @return the whole validation chain.
 	 */
 	public final List<T> getChain() {
 		return unmodifiableList(this.chain);

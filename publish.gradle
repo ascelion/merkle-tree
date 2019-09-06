@@ -22,6 +22,14 @@ task javadocJar(type: Jar) {
 	classifier = 'javadoc'
 }
 
+javadoc {
+	failOnError = true
+
+	options {
+		memberLevel = 'PROTECTED'
+	}
+}
+
 publishing {
 	publications {
 		maven( MavenPublication ) {

@@ -26,21 +26,35 @@ public interface TreeRoot<T> {
 
 	/**
 	 * Gets the hash value of the root node.
+	 *
+	 * @return the hash value.
 	 */
 	T hash();
 
 	/**
 	 * Gets the height of the tree.
+	 *
+	 * @return the height of the tree.
 	 */
 	int height();
 
 	/**
 	 * Gets number of leaves in this tree.
+	 *
+	 * @return the leaves count.
 	 */
 	int count();
 
 	/**
 	 * Gets the leaf at the given index; return null if no such leaf exists.
+	 *
+	 * <p>
+	 * The method returns the instance at position <code>index</code> that has been passed to the {@link TreeBuilder}.
+	 * </p>
+	 *
+	 * @param <L>   the actual type of the leaf.
+	 * @param index the leaf index.
+	 * @return the leaf instance at the given position or null.
 	 */
 	<L extends TreeLeaf<T, ?>> L getLeaf(int index);
 }
