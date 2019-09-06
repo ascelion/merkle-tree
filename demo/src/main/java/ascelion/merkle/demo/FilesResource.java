@@ -18,7 +18,6 @@
 package ascelion.merkle.demo;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
@@ -33,7 +32,6 @@ import ascelion.merkle.TreeRoot;
 
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.apache.commons.codec.binary.Base64.encodeBase64String;
-import static org.apache.commons.codec.binary.Hex.encodeHexString;
 
 import org.apache.commons.codec.binary.Hex;
 
@@ -43,14 +41,16 @@ public class FilesResource {
 
 	static public class FileResponse {
 
-		public final String name;
+		public final String base;
+		public final String path;
 		public final String hash;
 		public final int count;
 
-		FileResponse(Map.Entry<java.nio.file.Path, TreeRoot<byte[]>> ent) {
-			this.name = ent.getKey().getFileName().toString();
-			this.hash = encodeHexString(ent.getValue().hash());
-			this.count = ent.getValue().count();
+		FileResponse(FileWatchService.TreeInfo info) {
+			this.base = info.cont.uuid.toString();
+			this.path = info.path.toString();
+			this.hash = info.hash;
+			this.count = info.root.count();
 		}
 	}
 

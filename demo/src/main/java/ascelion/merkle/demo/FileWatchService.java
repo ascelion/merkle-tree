@@ -19,26 +19,14 @@ package ascelion.merkle.demo;
 
 import java.io.IOException;
 import java.nio.channels.ByteChannel;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
 import java.security.MessageDigest;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.stream.Stream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.UUID;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.event.Observes;
 import javax.inject.Singleton;
@@ -47,103 +35,125 @@ import ascelion.merkle.TreeBuilder;
 import ascelion.merkle.TreeRoot;
 import ascelion.merkle.help.DataSlice;
 
+import static ascelion.merkle.help.DataSlice.buildTree;
+import static com.google.common.collect.Maps.synchronizedBiMap;
+import static java.lang.String.format;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+import static java.util.Optional.ofNullable;
 import static org.apache.commons.codec.binary.Hex.encodeHexString;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 import lombok.EqualsAndHashCode;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Singleton
 public class FileWatchService {
-	static private final Logger L = LoggerFactory.getLogger(FileWatchService.class);
+	static private final Logger L = getLogger(FileWatchService.class);
 
-	@EqualsAndHashCode(of = "hash")
-	static class Tree {
-		final TreeRoot<byte[]> root;
-		final String hash;
+	@EqualsAndHashCode(of = { "path" })
+	@RequiredArgsConstructor
+	static class Container {
+		final Path path;
+		final UUID uuid = UUID.randomUUID();
+	}
 
-		Tree(TreeRoot<byte[]> root) {
-			this.root = root;
-			this.hash = encodeHexString(root.hash());
+	@EqualsAndHashCode(of = { "full" })
+	static class TreeInfo {
+		final Container cont;
+		final Path full;
+		final Path path;
+
+		TreeRoot<byte[]> root;
+		String hash;
+
+		TreeInfo(@NonNull Container cont, @NonNull Path full) {
+			this.cont = cont;
+			this.full = full;
+			this.path = cont.path.relativize(full);
 		}
 
-		Tree(String hash) {
-			this.root = null;
-			this.hash = hash;
+		void load(TreeBuilder<byte[]> tbld, int size) throws IOException {
+			final ByteChannel chan = Files.newByteChannel(this.cont.path.resolve(this.path), StandardOpenOption.READ);
+
+			this.root = buildTree(tbld, size, chan);
+			this.hash = encodeHexString(this.root.hash());
+		}
+
+		@Override
+		public String toString() {
+			return format("[%s]:/%s", this.cont.uuid, this.path);
 		}
 	}
 
-	private final ExecutorService exec = Executors.newSingleThreadExecutor();
-	private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
-	private final Map<Path, TreeRoot<byte[]>> toTree = new HashMap<>();
-	private final BiMap<Path, String> toHash = HashBiMap.create();
-
-	private FileSystem fs;
-	private WatchService ws;
+	private final Collection<Container> conts = new ArrayList<>();
+	private final BiMap<TreeInfo, String> trees = synchronizedBiMap(HashBiMap.create());
 
 	private String algo;
 	private int size;
 
 	private TreeBuilder<byte[]> tbld;
+	private Disposable sub;
 
-	public Map.Entry<Path, TreeRoot<byte[]>>[] trees() {
-		final Lock lock = this.rwLock.readLock();
-
-		lock.lock();
-
-		try {
-			return this.toTree.entrySet().toArray(new Map.Entry[0]);
-		} finally {
-			lock.unlock();
-		}
+	public TreeInfo[] trees() {
+		return this.trees.keySet().toArray(new TreeInfo[0]);
 	}
 
 	public TreeRoot<byte[]> tree(String hash) {
-		final Lock lock = this.rwLock.readLock();
-
-		lock.lock();
-
-		try {
-			final Path path = this.toHash.inverse().get(hash);
-
-			return path != null ? this.toTree.get(path) : null;
-		} finally {
-			lock.unlock();
-		}
+		return ofNullable(this.trees.inverse().get(hash))
+		        .map(t -> t.root)
+		        .orElse(null);
 	}
 
 	@SuppressWarnings("unused")
-	private void init(@Observes Server s) throws IOException {
-		this.algo = s.algo;
-		this.size = s.size;
+	private void init(@Observes Args args) throws IOException {
+		this.algo = args.algo;
+		this.size = args.size;
 
 		this.tbld = new TreeBuilder<>(this::hash, DataSlice::concat, new byte[0]);
 
-		Stream.of(s.directories)
-		        .map(Paths::get)
-		        .map(Path::toAbsolutePath)
-		        .forEach(this::register);
+		final FileWatch fw = FileWatch.create()
+		        .watch(args.directories)
+		        .kinds(ENTRY_MODIFY, ENTRY_DELETE);
 
-		this.exec.execute(this::poll);
+		fw.paths().stream()
+		        .map(Container::new)
+		        .forEach(this.conts::add);
+
+		this.sub = fw.observable()
+		        .filter(this::acceptEvent)
+		        .observeOn(Schedulers.trampoline())
+		        .subscribeOn(Schedulers.io())
+		        .subscribe(this::onChange);
 	}
 
-	private void register(Path path) {
-		try {
-			L.info("Watching {}", path);
+	@SneakyThrows
+	private boolean acceptEvent(FileWatch.Event evt) {
+		return Files.isRegularFile(evt.path) || evt.kind == ENTRY_DELETE;
+	}
 
-			path.register(this.ws, ENTRY_MODIFY, ENTRY_DELETE);
+	private void onChange(FileWatch.Event evt) throws IOException {
+		final Container cont = findCont(evt.path);
 
-			Files.newDirectoryStream(path)
-			        .forEach(this::replaceTree);
+		if (cont == null) {
+			L.warn(format("Spurious event: %s in %s", evt.kind, evt.path));
+		} else {
+			final TreeInfo tree = new TreeInfo(cont, evt.path);
 
-		} catch (final IOException e) {
-			throw new RuntimeException(path.toString(), e);
+			if (evt.kind == ENTRY_DELETE) {
+				deleteTree(tree);
+			} else {
+				replaceTree(tree);
+			}
 		}
+
 	}
 
 	@SneakyThrows
@@ -155,83 +165,33 @@ public class FileWatchService {
 		return dig.digest();
 	}
 
-	@PostConstruct
-	@SneakyThrows
-	private void postConstruct() {
-		this.fs = FileSystems.getDefault();
-		this.ws = this.fs.newWatchService();
-	}
-
 	@PreDestroy
 	private void preDestroy() {
-		this.exec.shutdownNow();
+		this.sub.dispose();
 	}
 
-	private void poll() {
-		try {
-			WatchKey key;
+	private void replaceTree(TreeInfo tree) throws IOException {
+		this.trees.remove(tree);
 
-			while ((key = this.ws.take()) != null) {
-				for (final WatchEvent<?> event : key.pollEvents()) {
-					final Path path = (Path) key.watchable();
-					final Path name = (Path) event.context();
+		if (Files.size(tree.full) > 0) {
+			L.info("Updating {}", tree);
 
-					if (event.kind() == ENTRY_MODIFY) {
-						replaceTree(path.resolve(name).toAbsolutePath());
-					}
-					if (event.kind() == ENTRY_DELETE) {
-						deleteTree(path.resolve(name).toAbsolutePath());
-					}
-				}
+			tree.load(this.tbld, this.size);
 
-				key.reset();
-			}
-		} catch (final InterruptedException e) {
-			L.info("Poll finished");
+			this.trees.forcePut(tree, tree.hash);
+		} else {
+			L.info("Truncated {}", tree);
 		}
 	}
 
-	private void replaceTree(Path path) {
-		try {
-			if (!Files.isRegularFile(path) || Files.size(path) == 0) {
-				L.info("Skipped {}", path.getFileName());
+	private void deleteTree(final TreeInfo tree) {
+		L.info("Removing {}", tree);
 
-				return;
-			}
-
-			L.info("Updating {}", path.getFileName());
-
-			final ByteChannel chn = Files.newByteChannel(path, StandardOpenOption.READ);
-
-			final Lock lock = this.rwLock.writeLock();
-
-			lock.lock();
-
-			try {
-				final TreeRoot<byte[]> root = DataSlice.buildTree(this.tbld, this.size, chn);
-
-				this.toTree.put(path, root);
-				this.toHash.put(path, encodeHexString(root.hash()));
-			} finally {
-				lock.unlock();
-			}
-		} catch (final IOException e) {
-			L.error("{}: {}", path.getFileName(), e.getMessage());
-		}
+		this.trees.remove(tree);
 	}
 
-	private void deleteTree(Path path) {
-		L.info("Removing {}", path.getFileName());
-
-		final Lock lock = this.rwLock.writeLock();
-
-		lock.lock();
-
-		try {
-			this.toTree.remove(path);
-			this.toHash.remove(path);
-		} finally {
-			lock.unlock();
-		}
+	private Container findCont(Path path) {
+		return this.conts.stream().filter(c -> path.startsWith(c.path)).findAny().orElse(null);
 	}
+
 }

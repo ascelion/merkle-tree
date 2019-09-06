@@ -20,6 +20,8 @@
 		</encoder>
 	</appender>
 
+	<logger name="ascelion.merkle.demo" level="INFO" />
+
 	<logger name="org.glassfish.jersey" level="INFO" />
 	<logger name="org.jboss.weld" level="INFO" />
 

@@ -17,30 +17,30 @@
 
 package ascelion.merkle.demo;
 
-import java.net.URI;
 import java.security.MessageDigest;
-import java.util.concurrent.Callable;
+import java.security.NoSuchAlgorithmException;
 
 import javax.enterprise.event.Event;
-import javax.inject.Inject;
-import javax.inject.Singleton;
+import javax.enterprise.inject.Vetoed;
+import javax.enterprise.util.TypeLiteral;
 
-import static java.lang.Runtime.getRuntime;
 import static java.lang.String.format;
-import static java.lang.Thread.currentThread;
-import static org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory.createHttpServer;
 
-import org.glassfish.grizzly.http.server.HttpServer;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.server.ServerProperties;
-import picocli.CommandLine.Command;
 import picocli.CommandLine.Help.Visibility;
+import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
+import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Parameters;
+import picocli.CommandLine.Spec;
 
-@Command(name = "merkle-tree-demo")
-@Singleton
-public class Server implements Callable<Integer> {
+@Vetoed
+final class Args {
+
+	static final TypeLiteral<Event<Args>> TYPE = new TypeLiteral<Event<Args>>() {
+	};
+
+	@Spec
+	private CommandSpec spec;
 
 	@Parameters(paramLabel = "DIRS", arity = "1..",
 	        description = "The directories to be watched.")
@@ -50,48 +50,33 @@ public class Server implements Callable<Integer> {
 	        description = { "The size of a slice in bytes." })
 	int size;
 
-	@Option(names = { "--algo" }, paramLabel = "NAME", defaultValue = "SHA-256", showDefaultValue = Visibility.ALWAYS,
-	        description = { "The name of the hashing algorithm." })
-	String algo;
+	String algo = "SHA-256";
 
 	@Option(names = { "--host" }, paramLabel = "HOST", defaultValue = "localhost", showDefaultValue = Visibility.ALWAYS,
 	        description = { "The port to listen to." })
-	private String host;
+	String host;
 
 	@Option(names = { "--port" }, paramLabel = "PORT", defaultValue = "8080", showDefaultValue = Visibility.ALWAYS,
 	        description = { "The address to listen to." })
-	private int port;
+	int port;
 
 	@Option(names = { "--path" }, paramLabel = "PATH", defaultValue = "", showDefaultValue = Visibility.ALWAYS,
 	        description = { "The context path." })
-	private String path;
+	String path;
 
 	@Option(names = { "-h", "--help" }, usageHelp = true,
 	        description = "Prints this message.")
-	private boolean help;
+	boolean help;
 
-	@Inject
-	private Event<Server> event;
-
-	@Override
-	public Integer call() throws Exception {
+	@Option(names = { "--algo" }, paramLabel = "NAME", defaultValue = "SHA-256", showDefaultValue = Visibility.ALWAYS,
+	        description = { "The name of the hashing algorithm." })
+	void algo(String algo) {
 		// check the algorithm name
-		MessageDigest.getInstance(this.algo);
-
-		final URI base = URI.create(format("http://%s:%d/%s", this.host, this.port, this.path));
-		final ResourceConfig conf = new ResourceConfig()
-		        .property(ServerProperties.PROVIDER_PACKAGES, getClass().getPackage().getName());
-		final HttpServer http = createHttpServer(base, conf, false);
-
-		http.start();
-
-		getRuntime().addShutdownHook(new Thread(http::shutdownNow));
-
-		this.event.fire(this);
-
-		currentThread().join();
-
-		return 0;
+		try {
+			MessageDigest.getInstance(algo);
+		} catch (final NoSuchAlgorithmException e) {
+			throw new ParameterException(this.spec.commandLine(),
+			        format("Invalid algorithm name: %s", algo));
+		}
 	}
-
 }
