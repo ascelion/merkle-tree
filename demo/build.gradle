@@ -3,7 +3,7 @@ apply plugin: 'application'
 mainClassName = 'ascelion.merkle.demo.Main'
 
 dependencies {
-	implementation project( ':impl' )
+	implementation project( ':merkle-tree' )
 
 	implementation platform( 'org.glassfish.jersey:jersey-bom:2.29' )
 

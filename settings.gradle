@@ -1,4 +1,19 @@
-rootProject.name = 'merkle-tree'
+def name = "merkle-tree"
 
-include ':demo'
-include ':impl'
+rootProject.name = "$name-parent"
+
+include 'demo'
+include 'impl'
+
+rootProject.children.each {
+	File file = new File(it.projectDir, '.project-name')
+
+	if( file.exists() ) {
+		it.name = file.text.trim()
+	}
+	else {
+		it.name = "$name${it.path.replace(':', '-')}"
+	}
+
+	println it.name
+}

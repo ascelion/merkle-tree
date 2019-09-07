@@ -1,14 +1,16 @@
 
+def publishName = 'merkle-tree'
+
 apply plugin: 'maven-publish'
 
 def doPublish  = project.hasProperty( 'doPublish' )
 def isSnapshot = version.endsWith( '-SNAPSHOT' )
 def isRelease  = !isSnapshot
 
-def signKey    = "${rootProject.name}.sign.keyId"
-def signSecret = "${rootProject.name}.sign.keySecret"
-def bintrayUSR = "${rootProject.name}.bintray.username"
-def bintrayPWD = "${rootProject.name}.bintray.password"
+def signKey    = "${publishName}.sign.keyId"
+def signSecret = "${publishName}.sign.keySecret"
+def bintrayUSR = "${publishName}.bintray.username"
+def bintrayPWD = "${publishName}.bintray.password"
 
 def gext       = gradle.ext
 
@@ -39,8 +41,6 @@ publishing {
 
 			artifact sourcesJar
 			artifact javadocJar
-
-			artifactId = setArtifactId
 
 			pom {
 				name = artifactId
@@ -100,7 +100,7 @@ if( isRelease && doPublish && gradle.hasProperty( bintrayUSR ) ) {
 		pkg {
 			repo = 'repo'
 			userOrg = 'ascelion'
-			name = rootProject.name
+			name = publishName
 			licenses = [ 'AGPL-3.0' ]
 			vcsUrl = 'https://github.com/ascelion/merkle-tree'
 			version {
