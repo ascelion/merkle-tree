@@ -19,7 +19,6 @@ package ascelion.merkle.demo;
 
 import java.io.IOException;
 import java.net.URI;
-import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
 
@@ -29,6 +28,7 @@ import static java.lang.Runtime.getRuntime;
 import static java.lang.String.format;
 import static java.lang.Thread.currentThread;
 import static org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory.createHttpServer;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
@@ -36,12 +36,15 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.ServerProperties;
 import org.jboss.weld.environment.se.Weld;
+import org.slf4j.Logger;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 import picocli.CommandLine;
 import picocli.CommandLine.ParameterException;
 
 @RequiredArgsConstructor(access = AccessLevel.PRIVATE)
 public final class Main {
+	static private final Logger L = getLogger(Main.class);
+
 	static {
 		SLF4JBridgeHandler.removeHandlersForRootLogger();
 		SLF4JBridgeHandler.install();
@@ -51,7 +54,7 @@ public final class Main {
 		LogManager.getLogManager().getLogger("").setLevel(Level.parse(rootLevel));
 	}
 
-	static public void main(String[] args) throws NoSuchAlgorithmException, IOException, InterruptedException {
+	static public void main(String[] args) throws IOException, InterruptedException {
 		final Args a = new Args();
 		final CommandLine c = new CommandLine(a);
 
@@ -62,7 +65,7 @@ public final class Main {
 		} catch (final ParameterException e) {
 			System.err.println(e.getMessage());
 
-			c.printVersionHelp(System.err);
+			c.usage(System.err);
 
 			System.exit(1);
 		}
@@ -75,6 +78,8 @@ public final class Main {
 	private void run() throws IOException, InterruptedException {
 		final Weld weld = new Weld();
 
+		L.info("Initialising WELD");
+
 		weld.initialize();
 
 		final URI base = URI.create(format("http://%s:%d/%s", this.args.host, this.args.port, this.args.path));
@@ -82,10 +87,15 @@ public final class Main {
 		        .property(ServerProperties.PROVIDER_PACKAGES, Main.class.getPackage().getName());
 		final HttpServer http = createHttpServer(base, conf, false);
 
+		L.info("Starting HTTP server");
+
 		http.start();
 
 		getRuntime().addShutdownHook(new Thread(() -> {
+			L.info("Stopping HTTP server");
 			http.shutdownNow();
+
+			L.info("Stopping WELD");
 			weld.shutdown();
 		}));
 

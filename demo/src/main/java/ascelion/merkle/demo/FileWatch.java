@@ -18,6 +18,7 @@
 package ascelion.merkle.demo;
 
 import java.io.IOException;
+import java.nio.file.ClosedWatchServiceException;
 import java.nio.file.FileSystem;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -119,10 +120,12 @@ public class FileWatch {
 		@Override
 		public void dispose() {
 			if (this.disposed.compareAndSet(false, true)) {
+				L.info("Closing WatchService");
+
 				try {
 					this.ws.close();
 				} catch (final IOException e) {
-					e.printStackTrace();
+					L.error("WatchService", e);
 				}
 			}
 		}
@@ -145,6 +148,14 @@ public class FileWatch {
 					key = this.ws.take();
 				} catch (final InterruptedException e) {
 					break;
+				} catch (final ClosedWatchServiceException e) {
+					if (isDisposed()) {
+						break;
+					}
+
+					obs.onError(e);
+
+					continue;
 				}
 
 				try {
