@@ -11,7 +11,7 @@ import ascelion.merkle.TreeLeaf;
 import ascelion.merkle.TreeRoot;
 
 /**
- * Helper class to build a Merkle tree from data stream. The resulted tree contains DataSlice as leaves.
+ * Helper class to build a Merkle tree from data stream. The resulted tree contains instances of this class as leaves.
  */
 public final class DataSlice extends TreeLeaf<byte[], byte[]> {
 

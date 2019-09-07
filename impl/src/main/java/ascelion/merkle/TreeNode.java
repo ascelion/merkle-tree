@@ -60,6 +60,11 @@ class TreeNode<T> {
 		this.count = left.count() + right.count();
 	}
 
+	/**
+	 * Gets the hash value of this node.
+	 *
+	 * @return the hash value.
+	 */
 	public final T hash() {
 		return this.hash;
 	}

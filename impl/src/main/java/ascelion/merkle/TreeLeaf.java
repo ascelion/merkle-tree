@@ -45,11 +45,11 @@ public class TreeLeaf<T, S> extends TreeNode<T> {
 	private final S content;
 
 	/**
-	 * Constructs a leaf witht a hash and some additional information.
+	 * Constructs a leaf from a hash and some additional information.
 	 *
 	 * <p>
-	 * The <code>content</code> doesn't have any particular meaning and is not checked in any way, but usually it
-	 * represents the data whose hash value is passed to the <code>hash</code> parameter.
+	 * The <code>content</code> doesn't have any particular meaning for this implementation and is not checked in any way,
+	 * but it typically represents the data whose hash value is passed to the <code>hash</code> parameter.
 	 * </p>
 	 *
 	 * @param hash    the hash of this leaf

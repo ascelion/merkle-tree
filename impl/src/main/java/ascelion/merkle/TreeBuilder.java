@@ -103,7 +103,7 @@ public final class TreeBuilder<T> {
 		}
 
 		@Override
-		public int count() {
+		int count() {
 			// empty nodes don't count
 			return 0;
 		}
@@ -121,8 +121,8 @@ public final class TreeBuilder<T> {
 	/**
 	 * Constructs a tree builder using the given operators and a supplier of the filler value.
 	 * <p>
-	 * Constructs a tree builder that uses arbitrary hash and concatenate functions. Both operators must handle null
-	 * values if the supplier <code>zero</code> is expected to return null.
+	 * Constructs a tree builder that uses arbitrary hash and concatenate functions. Both operators must handle null values
+	 * if the supplier <code>zero</code> is expected to return null.
 	 * </p>
 	 *
 	 * @param hashFn   the hash function
@@ -138,8 +138,8 @@ public final class TreeBuilder<T> {
 	/**
 	 * Constructs a tree builder using the given operators and a constant filler value.
 	 * <p>
-	 * Constructs a tree builder that uses arbitrary hash and concatenate functions. Both operators must handle null if
-	 * the <code>zero</code> is null.
+	 * Constructs a tree builder that uses arbitrary hash and concatenate functions. Both operators must handle null if the
+	 * <code>zero</code> is null.
 	 * </p>
 	 *
 	 * @param hashFn   the hash function
