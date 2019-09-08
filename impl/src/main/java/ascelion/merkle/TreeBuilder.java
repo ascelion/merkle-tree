@@ -110,7 +110,7 @@ public final class TreeBuilder<T> {
 	}
 
 	// the hash function
-	public final UnaryOperator<T> hashFn;
+	private final UnaryOperator<T> hashFn;
 	// the concatenation function
 	private final BinaryOperator<T> concatFn;
 	// supplier for the value of filler
@@ -267,6 +267,16 @@ public final class TreeBuilder<T> {
 	}
 
 	/**
+	 * Calculates the hash of the input value using the hash operator of this builder.
+	 *
+	 * @param value the value to be hashed.
+	 * @return the hash value of the input value.
+	 */
+	public T hash(T value) {
+		return this.hashFn.apply(value);
+	}
+
+	/**
 	 * Checks whether a hash chain is valid using the operators of this builder instance.
 	 *
 	 * The chain must contain both the hash of the node and the hash of the root as described at
@@ -291,9 +301,9 @@ public final class TreeBuilder<T> {
 			final T next = chain.get(k);
 
 			if ((index & 1) == 0) {
-				hash = this.hashFn.apply(this.concatFn.apply(hash, next));
+				hash = hash(this.concatFn.apply(hash, next));
 			} else {
-				hash = this.hashFn.apply(this.concatFn.apply(next, hash));
+				hash = hash(this.concatFn.apply(next, hash));
 			}
 
 			index >>>= 1;
@@ -302,21 +312,17 @@ public final class TreeBuilder<T> {
 		return eq.test(hash, chain.get(chain.size() - 1));
 	}
 
-	private Root<T> doBuild(TreeNode<T>[] leaves) {
+	private Root<T> doBuild(TreeNode<T>[] nodes) {
 		// expecting a power of two
-		assert bitCount(leaves.length) == 1;
+		assert bitCount(nodes.length) == 1;
 
-		if (leaves.length == 2) {
-			return newNode(leaves[0], leaves[1], true);
+		for (int count = nodes.length; count > 2; count /= 2) {
+			for (int i = 0; i < count; i += 2) {
+				nodes[i / 2] = newNode(nodes[i], nodes[i + 1], false);
+			}
 		}
 
-		final TreeNode<T>[] parents = new TreeNode[leaves.length / 2];
-
-		for (int i = 0; i < leaves.length; i += 2) {
-			parents[i / 2] = newNode(leaves[i], leaves[i + 1], false);
-		}
-
-		return doBuild(parents);
+		return newNode(nodes[0], nodes[1], true);
 	}
 
 	private <N extends TreeNode<T>> N newNode(TreeNode<T> left, TreeNode<T> right, boolean root) {

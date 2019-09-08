@@ -43,7 +43,7 @@ public final class DataSlice extends TreeLeaf<byte[], byte[]> {
 		byte[] data;
 
 		while ((data = readNBytes(ist, size)).length > 0) {
-			bld.collect(new DataSlice(bld.hashFn.apply(data), data));
+			bld.collect(new DataSlice(bld.hash(data), data));
 		}
 
 		return bld.build();
@@ -68,7 +68,7 @@ public final class DataSlice extends TreeLeaf<byte[], byte[]> {
 
 			buf.get(data, 0, data.length);
 
-			bld.collect(new DataSlice(bld.hashFn.apply(data), data));
+			bld.collect(new DataSlice(bld.hash(data), data));
 
 			buf.clear();
 		}
