@@ -326,7 +326,7 @@ public final class TreeBuilder<T> {
 	}
 
 	private <N extends TreeNode<T>> N newNode(TreeNode<T> left, TreeNode<T> right, boolean root) {
-		final T h = this.hashFn.apply(this.concatFn.apply(left.hash, right.hash));
+		final T h = hash(this.concatFn.apply(left.hash, right.hash));
 
 		return root ? (N) new Root<>(h, left, right) : (N) new TreeNode<>(h, left, right);
 	}

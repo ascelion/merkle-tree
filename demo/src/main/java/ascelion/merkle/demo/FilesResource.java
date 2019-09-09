@@ -18,9 +18,12 @@
 package ascelion.merkle.demo;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Stream;
 
 import javax.inject.Inject;
+import javax.json.bind.annotation.JsonbTypeSerializer;
 import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
@@ -30,10 +33,8 @@ import javax.ws.rs.Produces;
 import ascelion.merkle.TreeLeaf;
 import ascelion.merkle.TreeRoot;
 
+import static java.util.stream.Collectors.toMap;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static org.apache.commons.codec.binary.Base64.encodeBase64String;
-
-import org.apache.commons.codec.binary.Hex;
 
 @Path("")
 @Produces(APPLICATION_JSON)
@@ -41,43 +42,52 @@ public class FilesResource {
 
 	static public class FileResponse {
 
-		public final String base;
-		public final String path;
-		public final String hash;
+		public final java.nio.file.Path path;
+		@JsonbTypeSerializer(JsonbResolver.HEXSerializer.class)
+		public final byte[] hash;
 		public final int count;
 
-		FileResponse(FileWatchService.TreeInfo info) {
-			this.base = info.cont.uuid.toString();
-			this.path = info.path.toString();
-			this.hash = info.hash;
+		FileResponse(FileStoreService.TreeInfo info) {
+			this.path = info.path;
+			this.hash = info.root.hash();
 			this.count = info.root.count();
 		}
 	}
 
 	static public class SliceResponse {
-		public final String content;
-		public final String[] hashes;
+		@JsonbTypeSerializer(JsonbResolver.B64Serializer.class)
+		public final byte[] content;
+		@JsonbTypeSerializer(JsonbResolver.HEXSerializer.class)
+		public final byte[][] hashes;
 
 		public SliceResponse(TreeLeaf<byte[], byte[]> leaf) {
-			this.content = encodeBase64String(leaf.getContent());
+			this.content = leaf.getContent();
 
 			final List<byte[]> chain = leaf.getChain();
 
 			this.hashes = chain.stream()
 			        .skip(1)
 			        .limit(chain.size() - 1)
-			        .map(Hex::encodeHexString)
-			        .toArray(String[]::new);
+			        .toArray(byte[][]::new);
 		}
 	}
 
 	@Inject
-	private FileWatchService fws;
+	private FileStoreService fss;
 
 	@GET
-	@Path("files")
-	public FileResponse[] files() {
-		return Stream.of(this.fws.trees())
+	@Path("containers")
+	public Map<UUID, java.nio.file.Path> conts() {
+		return this.fss.conts()
+		        .stream()
+		        .collect(toMap(c -> c.uuid, c -> c.path.getFileName()));
+	}
+
+	@GET
+	@Path("containers/{uuid}")
+	public FileResponse[] files(@PathParam("uuid") UUID uuid) {
+		return Stream.of(this.fss.trees())
+		        .filter(t -> t.cont.uuid.equals(uuid))
 		        .map(FileResponse::new)
 		        .toArray(FileResponse[]::new);
 	}
@@ -85,7 +95,7 @@ public class FilesResource {
 	@GET
 	@Path("slice/{hash}/{index}")
 	public SliceResponse slice(@PathParam("hash") String hash, @PathParam("index") int index) {
-		final TreeRoot<byte[]> tree = this.fws.tree(hash);
+		final TreeRoot<byte[]> tree = this.fss.tree(hash);
 
 		if (tree == null || index >= tree.count()) {
 			throw new NotFoundException();
@@ -93,5 +103,4 @@ public class FilesResource {
 
 		return new SliceResponse(tree.getLeaf(index));
 	}
-
 }

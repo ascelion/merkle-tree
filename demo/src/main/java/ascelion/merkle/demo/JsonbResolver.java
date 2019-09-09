@@ -17,21 +17,63 @@
 
 package ascelion.merkle.demo;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
 import javax.json.bind.JsonbConfig;
+import javax.json.bind.adapter.JsonbAdapter;
+import javax.json.bind.serializer.JsonbSerializer;
+import javax.json.bind.serializer.SerializationContext;
+import javax.json.stream.JsonGenerator;
 import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
+
+import static org.apache.commons.codec.binary.Base64.encodeBase64String;
+import static org.apache.commons.codec.binary.Hex.encodeHexString;
 
 @Provider
 public class JsonbResolver implements ContextResolver<Jsonb> {
 
+	static class HEXSerializer implements JsonbSerializer<byte[]> {
+
+		@Override
+		public void serialize(byte[] obj, JsonGenerator gen, SerializationContext ctx) {
+			if (obj != null) {
+				gen.write(encodeHexString(obj));
+			}
+		}
+	}
+
+	static class B64Serializer implements JsonbSerializer<byte[]> {
+
+		@Override
+		public void serialize(byte[] obj, JsonGenerator gen, SerializationContext ctx) {
+			if (obj != null) {
+				gen.write(encodeBase64String(obj));
+			}
+		}
+	}
+
+	static class PathAdapter implements JsonbAdapter<Path, String> {
+
+		@Override
+		public String adaptToJson(Path obj) throws Exception {
+			return obj != null ? obj.toString() : null;
+		}
+
+		@Override
+		public Path adaptFromJson(String obj) throws Exception {
+			return obj == null || obj.isEmpty() ? null : Paths.get(obj);
+		}
+	}
+
 	@Override
 	public Jsonb getContext(Class<?> type) {
-		final JsonbConfig config = new JsonbConfig();
-
-		config.setProperty(JsonbConfig.FORMATTING, true);
-
-		return JsonbBuilder.create(config);
+		return JsonbBuilder.create(
+		        new JsonbConfig()
+		                .setProperty(JsonbConfig.FORMATTING, true)
+		                .withAdapters(new PathAdapter()));
 	}
 }

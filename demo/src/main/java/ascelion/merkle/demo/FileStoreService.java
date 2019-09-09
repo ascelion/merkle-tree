@@ -19,13 +19,19 @@ package ascelion.merkle.demo;
 
 import java.io.IOException;
 import java.nio.channels.ByteChannel;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import javax.annotation.PreDestroy;
 import javax.enterprise.event.Observes;
@@ -36,10 +42,8 @@ import ascelion.merkle.TreeRoot;
 import ascelion.merkle.help.DataSlice;
 
 import static ascelion.merkle.help.DataSlice.buildTree;
-import static com.google.common.collect.Maps.synchronizedBiMap;
 import static java.lang.String.format;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
+import static java.util.Collections.unmodifiableList;
 import static java.util.Optional.ofNullable;
 import static org.apache.commons.codec.binary.Hex.encodeHexString;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -47,7 +51,6 @@ import static org.slf4j.LoggerFactory.getLogger;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
 import lombok.EqualsAndHashCode;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -55,28 +58,30 @@ import lombok.SneakyThrows;
 import org.slf4j.Logger;
 
 @Singleton
-public class FileWatchService {
-	static private final Logger L = getLogger(FileWatchService.class);
+public class FileStoreService {
+	static private final Logger L = getLogger(FileStoreService.class);
 
 	@EqualsAndHashCode(of = { "path" })
 	@RequiredArgsConstructor
-	static class Container {
+	static class Container implements Comparable<Container> {
 		final Path path;
 		final UUID uuid = UUID.randomUUID();
+
+		@Override
+		public int compareTo(Container that) {
+			return this.path.compareTo(that.path);
+		}
 	}
 
-	@EqualsAndHashCode(of = { "full" })
+	@EqualsAndHashCode(of = { "cont", "path" })
 	static class TreeInfo {
 		final Container cont;
-		final Path full;
 		final Path path;
 
 		TreeRoot<byte[]> root;
-		String hash;
 
 		TreeInfo(@NonNull Container cont, @NonNull Path full) {
 			this.cont = cont;
-			this.full = full;
 			this.path = cont.path.relativize(full);
 		}
 
@@ -84,23 +89,26 @@ public class FileWatchService {
 			final ByteChannel chan = Files.newByteChannel(this.cont.path.resolve(this.path), StandardOpenOption.READ);
 
 			this.root = buildTree(tbld, size, chan);
-			this.hash = encodeHexString(this.root.hash());
 		}
 
 		@Override
 		public String toString() {
-			return format("[%s]:/%s", this.cont.uuid, this.path);
+			return format("[%s]:%s", this.cont.uuid, this.path);
 		}
 	}
 
-	private final Collection<Container> conts = new ArrayList<>();
-	private final BiMap<TreeInfo, String> trees = synchronizedBiMap(HashBiMap.create());
+	private final List<Container> conts = new ArrayList<>();
+	private final BiMap<TreeInfo, String> trees = HashBiMap.create();
 
 	private String algo;
 	private int size;
 
 	private TreeBuilder<byte[]> tbld;
 	private Disposable sub;
+
+	public List<Container> conts() {
+		return unmodifiableList(this.conts);
+	}
 
 	public TreeInfo[] trees() {
 		return this.trees.keySet().toArray(new TreeInfo[0]);
@@ -119,41 +127,54 @@ public class FileWatchService {
 
 		this.tbld = new TreeBuilder<>(this::hash, DataSlice::concat, new byte[0]);
 
-		final FileWatch fw = FileWatch.create()
-		        .watch(args.directories)
-		        .kinds(ENTRY_MODIFY, ENTRY_DELETE);
-
-		fw.paths().stream()
+		Stream.of(args.directories)
+		        .map(Paths::get)
+		        .map(Path::toAbsolutePath)
 		        .map(Container::new)
 		        .forEach(this.conts::add);
 
-		this.sub = fw.observable()
-		        .filter(this::acceptEvent)
-		        .observeOn(Schedulers.trampoline())
-		        .subscribeOn(Schedulers.io())
-		        .subscribe(this::onChange);
+		Collections.sort(this.conts);
+
+		for (int i = 1; i < this.conts.size(); i++) {
+			final Path c = this.conts.get(i).path;
+
+			this.conts.stream()
+			        .limit(i)
+			        .filter(p -> p.path.startsWith(c))
+			        .findAny()
+			        .ifPresent(p -> {
+				        throw new IllegalArgumentException(format("The path %s overlaps with %s", c, p));
+			        });
+		}
+
+		this.conts.forEach(this::walk);
 	}
 
 	@SneakyThrows
-	private boolean acceptEvent(FileWatch.Event evt) {
-		return Files.isRegularFile(evt.path) || evt.kind == ENTRY_DELETE;
-	}
+	private void walk(Container cont) {
+		Files.walkFileTree(cont.path, new SimpleFileVisitor<Path>() {
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+				if (Files.size(file) > 0) {
+					final TreeInfo tree = new TreeInfo(cont, file);
 
-	private void onChange(FileWatch.Event evt) throws IOException {
-		final Container cont = findCont(evt.path);
+					L.info("Loading {}", tree);
 
-		if (cont == null) {
-			L.warn(format("Spurious event: %s in %s", evt.kind, evt.path));
-		} else {
-			final TreeInfo tree = new TreeInfo(cont, evt.path);
+					tree.load(FileStoreService.this.tbld, FileStoreService.this.size);
 
-			if (evt.kind == ENTRY_DELETE) {
-				deleteTree(tree);
-			} else {
-				replaceTree(tree);
+					FileStoreService.this.trees.put(tree, encodeHexString(tree.root.hash()));
+				}
+
+				return FileVisitResult.CONTINUE;
 			}
-		}
 
+			@Override
+			public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+				L.error(file.toString(), exc);
+
+				return FileVisitResult.SKIP_SUBTREE;
+			}
+		});
 	}
 
 	@SneakyThrows
@@ -168,30 +189,6 @@ public class FileWatchService {
 	@PreDestroy
 	private void preDestroy() {
 		this.sub.dispose();
-	}
-
-	private void replaceTree(TreeInfo tree) throws IOException {
-		this.trees.remove(tree);
-
-		if (Files.size(tree.full) > 0) {
-			L.info("Updating {}", tree);
-
-			tree.load(this.tbld, this.size);
-
-			this.trees.forcePut(tree, tree.hash);
-		} else {
-			L.info("Truncated {}", tree);
-		}
-	}
-
-	private void deleteTree(final TreeInfo tree) {
-		L.info("Removing {}", tree);
-
-		this.trees.remove(tree);
-	}
-
-	private Container findCont(Path path) {
-		return this.conts.stream().filter(c -> path.startsWith(c.path)).findAny().orElse(null);
 	}
 
 }
