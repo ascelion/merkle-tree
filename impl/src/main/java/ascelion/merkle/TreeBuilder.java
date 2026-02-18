@@ -289,7 +289,7 @@ public final class TreeBuilder<T> {
 	 */
 	public boolean isValid(List<T> chain, int index, BiPredicate<T, T> eq) {
 		requireNonNull(chain, "The validation chain cannot be null");
-		requireNonNull(chain, "The equality operator cannot be null");
+		requireNonNull(eq, "The equality operator cannot be null");
 
 		if (chain.size() < 2) {
 			throw new IllegalArgumentException("Chain too short");
