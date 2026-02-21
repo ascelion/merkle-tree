@@ -48,7 +48,7 @@ Use the TreeBuilder to create a Merkle tree
 
 ```
 
-You may also want to check the [demo project](https://github.com/ascelion/merkle-tree/tree/master/demo) for a real example - well, kind of :).
+You may also want to check the [demo project](https://github.com/ascelion/merkle-tree/tree/main/demo) for a real example - well, kind of :).
 
 Also [see the javadoc](https://ascelion.github.io/merkle-tree/index.html).
 
