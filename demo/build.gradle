@@ -1,6 +1,8 @@
 apply plugin: 'application'
 
-mainClassName = 'ascelion.merkle.demo.Main'
+application {
+	mainClass = 'ascelion.merkle.demo.Main'
+}
 
 dependencies {
 	implementation project( ':merkle-tree' )

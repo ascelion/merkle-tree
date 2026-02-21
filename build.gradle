@@ -1,11 +1,10 @@
 buildscript {
 	repositories {
 		mavenCentral()
-		jcenter()
+		gradlePluginPortal()
 	}
 	dependencies {
-		classpath 'pl.allegro.tech.build:axion-release-plugin:1.10.+'
-		classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.+'
+		classpath 'pl.allegro.tech.build:axion-release-plugin:1.18.+'
 	}
 }
 
@@ -18,7 +17,7 @@ allprojects {
 	apply plugin: 'eclipse'
 
 	repositories {
-		jcenter()
+		mavenCentral()
 	}
 
 	defaultTasks 'clean', 'build'

@@ -12,5 +12,5 @@ configurations {
 }
 
 dependencies {
-	lombok 'org.projectlombok:lombok:1.18.8'
+	lombok 'org.projectlombok:lombok:1.18.36'
 }

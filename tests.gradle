@@ -8,11 +8,8 @@ dependencies {
 }
 
 task testReport(type: TestReport) {
-	destinationDir = file("$buildDir/reports/tests")
-
-	tasks.withType(Test) {
-		reportOn it
-	}
+	destinationDirectory = file("$buildDir/reports/tests")
+	testResults.from(tasks.withType(Test))
 }
 
 tasks.withType(Test) {
@@ -21,7 +18,7 @@ tasks.withType(Test) {
 	testLogging.showStandardStreams = true
  	testLogging.exceptionFormat = 'full'
 
-	reports.html.enabled = false
+	reports.html.required = false
 
 	check.dependsOn it
 	testReport.dependsOn it
